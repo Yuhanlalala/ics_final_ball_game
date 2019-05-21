@@ -1,5 +1,6 @@
-
+#import connection
 from chat_client_class import *
+#import chat_server
 
 def main():
     #chat_server.main()

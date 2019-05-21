@@ -7,6 +7,7 @@ from chat_utils import *
 import json
 import os
 
+score=0
 class ClientSM:
     def __init__(self, s):
         self.state = S_OFFLINE
@@ -14,6 +15,7 @@ class ClientSM:
         self.me = ''
         self.out_msg = ''
         self.s = s
+        #self.score = 0
 
     def set_state(self, state):
         self.state = state
@@ -63,14 +65,14 @@ class ClientSM:
                 if my_msg == 'q':
                     self.out_msg += 'See you next time!\n'
                     self.state = S_OFFLINE
-                    
+
                 elif my_msg == 'game':
                     self.out_msg+='Game time!'
                     self.out_msg += 'start'
                     import my_game_main as game_code
                     score = game_code.game_loop()
                     self.out_msg += 'your score is ' + str(score)
-                    
+                    # self.state = S_GAME
                 elif my_msg == 'time':
                     mysend(self.s, json.dumps({"action":"time"}))
                     time_in = json.loads(myrecv(self.s))["results"]
@@ -111,8 +113,6 @@ class ClientSM:
                     else:
                         self.out_msg += 'Sonnet ' + poem_idx + ' not found\n\n'
 
-
-                    
                 else:
                     self.out_msg += menu
 
@@ -127,12 +127,14 @@ class ClientSM:
                     # IMPLEMENTATION
                     # ---- start your code ---- #
                     """when someone connects you"""
-                    self.peer = peer_msg["from"]
-                    self.out_msg += 'Request from ' + self.peer + '\n'
-                    self.out_msg += 'You are connected with ' + self.peer
-                    self.out_msg += '. Chat away!\n\n'
-                    self.out_msg += '------------------------------------\n'
+                    print(peer_msg)
+                    
+                    # mysend(self.s, json.dumps({"action":"connect", "status":'success',"from":self.me}))
+                    # peer_msg["status"] = 'success'
+                    self.out_msg += 'connected'+'\n'
                     self.state = S_CHATTING
+                    
+               
                     # ---- end of your code --- #
 
 #==============================================================================
@@ -149,27 +151,25 @@ class ClientSM:
                 elif my_msg == 'game':
                     import my_game_main as game_code
                     score = game_code.game_loop()
+                    # mysend(self.s, json.dumps({"action":"score",'from':'myself','message':score}))
+                    # score = game_code.score
                     self.out_msg += 'Your score is ' + str(score)
+                    
                     mysend(self.s, json.dumps({"action":"score", "from":"[" + self.me + "]", "message":score}))
                     self.out_msg += "   Do you want to know who is the winner? (you can go and check by enter 'who win') "
                 elif my_msg == 'who win':
                     mysend(self.s, json.dumps({"action":"get_score"}))
+                    # score_rslt = json.loads(myrecv(self.s))["results"].strip()
+                    # winner = json.loads(myrecv(self.s))["who"]
+                    # winner_score = json.loads(myrecv(self.s))["results"]
                     message1 = json.loads(myrecv(self.s))["message"]
                     self.out_msg += message1
-
-                    
             if len(peer_msg) > 0:    # peer's stuff, coming in
                 # IMPLEMENTATION
                 # ---- start your code ---- #
                 peer_msg = json.loads(peer_msg)
-
-                if peer_msg['action'] == 'connect' and peer_msg['status'] == 'request':
-                    peer = peer_msg['from'].strip()
-                    self.out_msg += '(' + peer + ' joined the group chat)\n'
-
-                elif peer_msg['action'] == 'exchange':
-                    # peer = peer_msg['from'].strip()
-                    # self.out_msg += peer + peer_msg['message']
+                # print(peer_msg)
+                if peer_msg['action'] == 'exchange':
                     if peer_msg['message'] == 'game':
                         
                         self.out_msg += 'Game time with ' + peer_msg['from']
@@ -187,24 +187,34 @@ class ClientSM:
                     else:
                         self.out_msg += '['+ peer_msg['from'] + ']' + peer_msg['message']+'\n'
                 elif peer_msg['action'] == 'disconnect':
-                    self.out_msg += 'Group dismissed.\n'
-                    self.state = S_LOGGEDIN
-                    self.peer = ''
-
+                    # self.out_msg += self.me +  'is gone'
+                    self.out_msg += 'you are alone now.'
                 elif peer_msg['action'] == 'quit':
                     # self.out_msg += self.me +  'is gone'
                     self.out_msg += peer_msg['from'] + ' has left the groop.'   
-
+                elif peer_msg['action'] == 'connect' and peer_msg['status'] == 'request':
+                    peer = peer_msg['from'].strip()
+                    self.out_msg += peer + 'joined the groop.'
                 elif peer_msg['action'] == 'get_score':
                     self.out_msg += 'the other player has checked your score!'
+                # elif peer_msg['action'] == 'game':
+                #     peer = peer_msg['from'].strip()
+                    
+
+
                 # ---- end of your code --- #
             # Display the menu again
             if self.state == S_LOGGEDIN:
                 self.out_msg += menu
-
 #==============================================================================
 # invalid state
 #==============================================================================
+        # elif self.state == S_GAME:
+        #     import my_game_main as game_code
+        #     score = game_code.game_loop()
+        #     # mysend(self.s, json.dumps({"action":"score",'from':'myself','score':score}))
+        #     self.state = S_LOGGEDIN
+        #     self.out_msg += 'your score is ' + str(score)
         else:
             self.out_msg += 'How did you wind up here??\n'
             print_state(self.state)

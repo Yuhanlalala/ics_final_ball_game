@@ -192,7 +192,7 @@ def game_loop():
         pg.display.update() #keep update,不会一闪而过
         time.sleep(0.001) #每隔0.005s循环一次
 
-game_loop()
+# game_loop()
 # print(game_loop())
 
 

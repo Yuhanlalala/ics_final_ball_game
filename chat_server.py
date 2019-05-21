@@ -3,6 +3,7 @@ Created on Tue Jul 22 00:47:05 2014
 
 @author: alina, zzhang
 """
+
 import time
 import socket
 import select
@@ -13,6 +14,7 @@ import json
 import pickle as pkl
 from chat_utils import *
 import chat_group as grp
+import os
 
 class Server:
     def __init__(self):
@@ -28,6 +30,7 @@ class Server:
         self.all_sockets.append(self.server)
         #initialize past chat indices
         self.indices={}
+        self.dic_score = {}
         # sonnet
         # self.sonnet_f = open('AllSonnets.txt.idx', 'rb')
         # self.sonnet = pkl.load(self.sonnet_f)
@@ -125,9 +128,13 @@ class Server:
                     to_sock = self.logged_name2sock[g]
                     # IMPLEMENTATION
                     # ---- start your code ---- #
-                    #pass
-                    #mysend(to_sock, "...index the messages before sending, or search won't work")
-                    mysend(to_sock, json.dumps({"action":"exchange", "from": msg["from"] , "message":msg["message"]}))
+                    mysend(to_sock, json.dumps({"action":"exchange", "from":from_name,'message':msg['message']}))
+                    # mysend(to_sock, "...index the messages before sending, or search won't work")
+
+
+
+
+
                     # ---- end of your code --- #
 #==============================================================================
 #                 listing available peers
@@ -136,10 +143,13 @@ class Server:
                 from_name = self.logged_sock2name[from_sock]
                 # IMPLEMENTATION
                 # ---- start your code ---- #
-                #pass
-                #msg = "...needs to use self.group functions to work"
-                g=self.group
-                msg=g.list_all(self)
+                msg = str(self.group.list_all(from_name))
+                
+                #  msg = "...needs to use self.group functions to work"
+
+
+
+
 
                 # ---- end of your code --- #
                 mysend(from_sock, json.dumps({"action":"list", "results":msg}))
@@ -149,19 +159,17 @@ class Server:
             elif msg["action"] == "poem":
                 # IMPLEMENTATION
                 # ---- start your code ---- #
-                #pass
-                #poem = "...needs to use self.sonnet functions to work"
-                from_name = self.logged_sock2name[from_sock]
-                num=int(msg["target"])       
-                print(from_name, 'ask for poem', num)
-                
-                poem_list=self.sonnet.get_poem(num)
-                poem = '\n'.join(poem_list).strip()
-                #poem=''
-                #for each in poem_list:
-                #    poem+=each+'\n'
+                poem_list = self.sonnet.get_poem(int(msg['target']))
+                poem = ''
+                for i in poem_list:
+                    poem += i+'\n'
+                # poem = "...needs to use self.sonnet functions to work"
                 print('here:\n', poem)
-                
+
+
+
+
+
                 # ---- end of your code --- #
                 mysend(from_sock, json.dumps({"action":"poem", "results":poem}))
 #==============================================================================
@@ -176,24 +184,53 @@ class Server:
             elif msg["action"] == "search":
                 # IMPLEMENTATION
                 # ---- start your code ---- #
-                #pass
-                #search_rslt = "needs to use self.indices search to work"
-                #print('server side search: ' + search_rslt)
-                from_name = self.logged_sock2name[from_sock]
-                term=msg["target"]
-                print(from_name, 'search for', term)
+                # name = self.logged_sock2name[from_sock]
                 
-                search_rslt=''
-                for each in self.indices:
-                    if len(self.indices[each].search(term))>0:
-                        for each in self.indices[each].search(term):
-                            search_rslt+=str(each[-1])+'\n'
-
+                # if name in self.indices.keys():
+                search_rslt = ''
+                for i in self.indices.keys():
+                    a = self.indices[i].search(msg['target'])
+                    if len(a) == 0:
+                        continue
+                    else:
+                        for m in a:
+                            search_rslt += m[1] + '\n'
+                            #string = a[m]
+                            #search_rslt += str(string[1])
+                        # string=a[1]
+                        # search_rslt+=string
+                # assert search_rslt is None, search_rslt
+                            # + str(string[1])
+                # search_rslt = str(self.indices[name].search(msg['target']))+'\n'
+                # search_rslt = "needs to use self.indices search to work"
                 print('server side search: ' + search_rslt)
+                # else:
+                #     search_rslt = 'no foundqq'
+
+
+
+
+
                 # ---- end of your code --- #
                 mysend(from_sock, json.dumps({"action":"search", "results":search_rslt}))
 #==============================================================================
-# game
+# the "from" guy has had enough (talking to "to")!
+#==============================================================================
+            elif msg["action"] == "disconnect":
+                from_name = self.logged_sock2name[from_sock]
+                the_guys = self.group.list_me(from_name)
+                self.group.disconnect(from_name)
+                the_guys.remove(from_name)
+                if len(the_guys) == 1:  # only one left
+                    g = the_guys.pop()
+                    to_sock = self.logged_name2sock[g]
+                    mysend(to_sock, json.dumps({"action":"disconnect"}))
+                else:
+                    for i in the_guys:
+                        to_sock = self.logged_name2sock[i]
+                        mysend(to_sock, json.dumps({"action":"quit", 'from':from_name}))
+#==============================================================================
+#                 the "from" guy really, really has had enough
 #==============================================================================
             elif msg["action"] == "game":
                 mysend(from_sock, json.dumps({"action":"game","from": msg["from"], "results":'Game time now!!'}))
@@ -218,23 +255,6 @@ class Server:
                     mysend(to_sock, json.dumps({"action":"exchange", "from":'system','message':'the winner is '+winner + ' and the score '+str(maxi_score)}))
                 self.dic_score = {}
                     # mysend(to_sock, "...index the messages before sending, or search won't work")
-
-
-#==============================================================================
-# the "from" guy has had enough (talking to "to")!
-#==============================================================================
-            elif msg["action"] == "disconnect":
-                from_name = self.logged_sock2name[from_sock]
-                the_guys = self.group.list_me(from_name)
-                self.group.disconnect(from_name)
-                the_guys.remove(from_name)
-                if len(the_guys) == 1:  # only one left
-                    g = the_guys.pop()
-                    to_sock = self.logged_name2sock[g]
-                    mysend(to_sock, json.dumps({"action":"disconnect"}))
-#==============================================================================
-#                 the "from" guy really, really has had enough
-#==============================================================================
 
         else:
             #client died unexpectedly
@@ -265,5 +285,4 @@ def main():
     server=Server()
     server.run()
 
-if __name__ == '__main__':
-    main()
+main()

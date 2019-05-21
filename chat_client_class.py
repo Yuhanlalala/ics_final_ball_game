@@ -5,43 +5,11 @@ import sys
 import json
 from chat_utils import *
 import client_state_machine as csm
+
 import threading
-from tkinter import *
 
-
-def main_page():
-    def send_msg():
-        send_text=str(user_input.get())
-        entry.delete(0,END)
-        text.insert(INSERT, send_text+'\n')
-        result.append(send_text)
-        
-    root = Tk()
-    root.title('Chat system')
-    root.configure(width=200, height=100)
-
-    #text
-    text = Text(root,width=65,height=40,highlightthickness=1,borderwidth=2)
-    text.grid(row=0,column=0,padx=(10, 30))
-    
-    #button
-    confirm = Button(root,text='Confirm',width = 6,height = 1,command = send_msg)
-    confirm.place(relx=0.8,rely=0.95)
-
-    #input
-    user_input = StringVar()
-    entry = Entry(root,textvariable = user_input,width = 23)
-    entry.place(relx=0.1,rely=0.95,relwidth=0.7,relheight=0.05)
-    result = []
-
-    client = Client(text, result,args=None)
-    t = threading.Thread(target=client.run_chat)
-    t.start()
-    root.mainloop()
-
-    
 class Client:
-    def __init__(self,txt, user_input,args=None):
+    def __init__(self, args):
         self.peer = ''
         self.console_input = []
         self.state = S_OFFLINE
@@ -49,8 +17,6 @@ class Client:
         self.local_msg = ''
         self.peer_msg = ''
         self.args = args
-        self.user_input= user_input
-        self.txt = txt
 
     def quit(self):
         self.socket.shutdown(socket.SHUT_RDWR)
@@ -61,7 +27,7 @@ class Client:
 
     def init_chat(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM )
-        svr = SERVER #if self.args.d == None else (self.args.d, CHAT_PORT)
+        svr = SERVER if self.args.d == None else (self.args.d, CHAT_PORT)
         self.socket.connect(svr)
         self.sm = csm.ClientSM(self.socket)
         reading_thread = threading.Thread(target=self.read_input)
@@ -91,8 +57,6 @@ class Client:
     def output(self):
         if len(self.system_msg) > 0:
             print(self.system_msg)
-            self.txt.insert(INSERT, self.system_msg + '\n')
-            self.txt.update()
             self.system_msg = ''
 
     def login(self):
@@ -117,8 +81,8 @@ class Client:
 
     def read_input(self):
         while True:
-            if len(self.user_input)!=0: 
-                self.console_input.append(self.user_input.pop()) # no need for lock, append is thread safe
+            text = sys.stdin.readline()[:-1]
+            self.console_input.append(text) # no need for lock, append is thread safe
 
     def print_instructions(self):
         self.system_msg += menu
@@ -144,5 +108,3 @@ class Client:
     def proc(self):
         my_msg, peer_msg = self.get_msgs()
         self.system_msg += self.sm.proc(my_msg, peer_msg)
-
-main_page()

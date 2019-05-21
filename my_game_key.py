@@ -7,13 +7,13 @@ import time
 pg.init()
 pg.font.init()
 pg.mixer.init()
-pg.mixer.music.load("/Users/a123/Documents/ics/final_project/Dark_Tranquility.mp3")
+pg.mixer.music.load("/Users/a123/Documents/ics/final_project/Monla - Paris Paris!.mp3")
 pick_sound = pg.mixer.Sound('/Users/a123/Documents/ics/final_project/Glass_and_Metal_Collision.wav')
 clock =pg.time.Clock()
 pg.mixer.pre_init(44100,16,2,4096)
 
 gameDisplay = pygame.display.set_mode( (600,500) )
-pg.mixer.music.set_volume(0.5)
+pg.mixer.music.set_volume(0.9)
 pg.mixer.music.play(-1)
 
 # pg.mixer.Sound('background_music.mp3').play()
@@ -59,7 +59,7 @@ def paused():
 
     while pause:
         for event in pg.event.get():
-            print(event)
+            # print(event)
             if event.type == pg.QUIT:
                 pg.quit()
                 quit()
@@ -80,7 +80,7 @@ def game_over():
 
     while over:
         for event in pg.event.get():
-            print(event)
+            # print(event)
             if event.type == pg.QUIT:
                 pg.quit()
                 quit()
